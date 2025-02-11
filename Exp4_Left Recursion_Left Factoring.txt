@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <string.h>
+
+#define MAX_PRODUCTIONS 20
+#define MAX_SYMBOLS 50
+
+void eliminateLeftRecursion(char productions[MAX_PRODUCTIONS][MAX_SYMBOLS], int *n) {
+    char newProductions[MAX_PRODUCTIONS][MAX_SYMBOLS];
+    int newCount = 0;
+   
+    for (int i = 0; i < *n; i++) {
+        char nonTerminal = productions[i][0];
+        if (productions[i][2] == nonTerminal) { // Direct left recursion
+            char alpha[MAX_SYMBOLS], beta[MAX_SYMBOLS];
+            int j = 3, alphaIndex = 0, betaIndex = 0;
+           
+            while (productions[i][j] != '|' && productions[i][j] != '\0') {
+                alpha[alphaIndex++] = productions[i][j++];
+            }
+            alpha[alphaIndex] = '\0';
+           
+            if (productions[i][j] == '|') {
+                j++;
+                while (productions[i][j] != '\0') {
+                    beta[betaIndex++] = productions[i][j++];
+                }
+            }
+            beta[betaIndex] = '\0';
+           
+            sprintf(newProductions[newCount++], "%c->%s%c'", nonTerminal, beta, nonTerminal);
+            sprintf(newProductions[newCount++], "%c'->%s%c'|ε", nonTerminal, alpha, nonTerminal);
+        } else {
+            strcpy(newProductions[newCount++], productions[i]);
+        }
+    }
+   
+    *n = newCount;
+    for (int i = 0; i < newCount; i++) {
+        strcpy(productions[i], newProductions[i]);
+    }
+}
+
+void leftFactorGrammar(char productions[MAX_PRODUCTIONS][MAX_SYMBOLS], int *n) {
+    char newProductions[MAX_PRODUCTIONS][MAX_SYMBOLS];
+    int newCount = 0;
+   
+    for (int i = 0; i < *n; i++) {
+        char nonTerminal = productions[i][0];
+        char commonPrefix[MAX_SYMBOLS];
+        int j = 3, prefixIndex = 0;
+       
+        while (productions[i][j] != '|' && productions[i][j] != '\0') {
+            commonPrefix[prefixIndex++] = productions[i][j++];
+        }
+        commonPrefix[prefixIndex] = '\0';
+       
+        if (productions[i][j] == '|') { // If alternative production exists
+            sprintf(newProductions[newCount++], "%c->%s%c'", nonTerminal, commonPrefix, nonTerminal);
+            sprintf(newProductions[newCount++], "%c'->%s|ε", nonTerminal, &productions[i][j + 1]);
+        } else {
+            strcpy(newProductions[newCount++], productions[i]);
+        }
+    }
+   
+    *n = newCount;
+    for (int i = 0; i < newCount; i++) {
+        strcpy(productions[i], newProductions[i]);
+    }
+}
+
+int main() {
+    char productions[MAX_PRODUCTIONS][MAX_SYMBOLS];
+    int n;
+   
+    printf("Enter the number of productions: ");
+    scanf("%d", &n);
+    getchar(); // To consume newline after scanf
+   
+    printf("Enter the productions (e.g., A->AB|a):\n");
+    for (int i = 0; i < n; i++) {
+        fgets(productions[i], MAX_SYMBOLS, stdin);
+        productions[i][strcspn(productions[i], "\n")] = 0; // Remove newline character
+    }
+   
+    eliminateLeftRecursion(productions, &n);
+    leftFactorGrammar(productions, &n);
+   
+    printf("\nThe transformed grammar after eliminating left recursion and left factoring:\n");
+    for (int i = 0; i < n; i++) {
+        printf("%s\n", productions[i]);
+    }
+   
+    return 0;
+}
