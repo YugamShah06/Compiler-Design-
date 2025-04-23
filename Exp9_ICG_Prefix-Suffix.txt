@@ -1,0 +1,114 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX 100
+
+// Stack structure for operators and operands
+typedef struct {
+    char data[MAX];
+    int top;
+} Stack;
+
+void init(Stack* s) {
+    s->top = -1;
+}
+
+int isEmpty(Stack* s) {
+    return s->top == -1;
+}
+
+void push(Stack* s, char ch) {
+    s->data[++(s->top)] = ch;
+}
+
+char pop(Stack* s) {
+    return s->data[(s->top)--];
+}
+
+char peek(Stack* s) {
+    return s->data[s->top];
+}
+
+int precedence(char op) {
+    if (op == '+' || op == '-') return 1;
+    if (op == '*' || op == '/') return 2;
+    if (op == '^') return 3;
+    return 0;
+}
+
+// Infix to Postfix conversion (Suffix)
+void infixToPostfix(char* infix, char* postfix) {
+    Stack s;
+    init(&s);
+    int k = 0;
+    for (int i = 0; infix[i]; i++) {
+        if (isalnum(infix[i])) {
+            postfix[k++] = infix[i];
+        } else if (infix[i] == '(') {
+            push(&s, '(');
+        } else if (infix[i] == ')') {
+            while (!isEmpty(&s) && peek(&s) != '(') {
+                postfix[k++] = pop(&s);
+            }
+            pop(&s); // Remove '('
+        } else {
+            while (!isEmpty(&s) && precedence(peek(&s)) >= precedence(infix[i])) {
+                postfix[k++] = pop(&s);
+            }
+            push(&s, infix[i]);
+        }
+    }
+    while (!isEmpty(&s)) {
+        postfix[k++] = pop(&s);
+    }
+    postfix[k] = '\0';
+}
+
+// Infix to Prefix conversion
+void infixToPrefix(char* infix, char* prefix) {
+    Stack s;
+    init(&s);
+    int len = strlen(infix);
+    int k = 0;
+    char reversed[MAX];
+
+    // Reverse the infix expression
+    for (int i = 0; i < len; i++) {
+        reversed[i] = infix[len - i - 1];
+    }
+    reversed[len] = '\0';
+
+    // Invert brackets
+    for (int i = 0; i < len; i++) {
+        if (reversed[i] == '(') reversed[i] = ')';
+        else if (reversed[i] == ')') reversed[i] = '(';
+    }
+
+    // Generate postfix for the reversed expression
+    infixToPostfix(reversed, prefix);
+
+    // Reverse the postfix to get the prefix
+    len = strlen(prefix);
+    for (int i = 0; i < len / 2; i++) {
+        char temp = prefix[i];
+        prefix[i] = prefix[len - i - 1];
+        prefix[len - i - 1] = temp;
+    }
+}
+
+int main() {
+    char infix[MAX], postfix[MAX], prefix[MAX];
+
+    printf("Enter the infix expression: ");
+    scanf("%s", infix);
+
+    infixToPostfix(infix, postfix);
+    infixToPrefix(infix, prefix);
+
+    printf("Infix Expression: %s\n", infix);
+    printf("Postfix (Suffix) Expression: %s\n", postfix);
+    printf("Prefix Expression: %s\n", prefix);
+
+    return 0;
+}

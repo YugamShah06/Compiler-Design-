@@ -1,0 +1,57 @@
+#include <iostream>
+#include <sstream>
+#include <vector>
+using namespace std;
+
+// Function to generate mock machine code
+vector<string> generateMachineCode(const string& statement) {
+    vector<string> instructions;
+    stringstream ss(statement);
+    string type, var, eq, op1, op, op2;
+
+    ss >> type >> var >> eq >> op1 >> op >> op2;
+
+    // Clean variable and operand
+    if (var.back() == '=') {
+        var.pop_back();
+        eq = "=";
+    }
+
+    if (!op2.empty() && op2.back() == ';') {
+        op2.pop_back();
+    }
+
+    // Generate simulated instructions
+    instructions.push_back("LOAD R1, #" + op1);       // Load operand 1
+    instructions.push_back("LOAD R2, #" + op2);       // Load operand 2
+
+    if (op == "+")
+        instructions.push_back("ADD R3, R1, R2");     // Addition
+    else if (op == "-")
+        instructions.push_back("SUB R3, R1, R2");     // Subtraction
+    else if (op == "*")
+        instructions.push_back("MUL R3, R1, R2");     // Multiplication
+    else if (op == "/")
+        instructions.push_back("DIV R3, R1, R2");     // Division
+    else
+        instructions.push_back("Unsupported operation.");
+
+    instructions.push_back("STORE " + var + ", R3");  // Store result
+
+    return instructions;
+}
+
+int main() {
+    string statement;
+    cout << "Enter a simple C-style statement (e.g., int a = 5 + 3;):\n";
+    getline(cin, statement);
+
+    vector<string> machineCode = generateMachineCode(statement);
+
+    cout << "\nGenerated Machine Code:\n";
+    for (const auto& instr : machineCode) {
+        cout << instr << endl;
+    }
+
+    return 0;
+}

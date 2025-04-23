@@ -1,0 +1,182 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#define MAX_GRAMMAR_RULES 50
+#define MAX_STATE_COUNT 50
+#define MAX_SYMBOLS 100
+
+// Structure for representing a production rule
+typedef struct {
+    char lhs[10]; // Left hand side (Non-terminal)
+    char rhs[10]; // Right hand side (Production)
+    int dotPos;   // Position of the dot (.)
+} Production;
+
+// Structure for storing the LR(0) automaton
+typedef struct {
+    Production productions[MAX_GRAMMAR_RULES];
+    int productionCount;
+    int states[MAX_STATE_COUNT][MAX_GRAMMAR_RULES]; // Each state can have multiple items (productions)
+    int stateCount;
+} LR0Automaton;
+
+// Function to initialize the automaton with the grammar
+void initAutomaton(LR0Automaton* automaton, Production* grammar, int productionCount) {
+    automaton->productionCount = productionCount;
+    for (int i = 0; i < productionCount; i++) {
+        automaton->productions[i] = grammar[i];
+    }
+    automaton->stateCount = 0;
+}
+
+// Function to display the production in a readable format
+void displayProduction(Production* prod) {
+    printf("%s -> ", prod->lhs);
+    for (int i = 0; i < strlen(prod->rhs); i++) {
+        if (i == prod->dotPos) {
+            printf(".");
+        }
+        printf("%c", prod->rhs[i]);
+    }
+    if (prod->dotPos == strlen(prod->rhs)) {
+        printf(".");
+    }
+    printf("\n");
+}
+
+// Function to check if a non-terminal is present in the production
+int isNonTerminal(char symbol) {
+    return isupper(symbol); // Non-terminals are assumed to be uppercase
+}
+
+// Function to compute closure of a set of items (productions)
+void closure(LR0Automaton* automaton, int* state, int* stateSize) {
+    int added = 1;
+    int newState[MAX_GRAMMAR_RULES];
+    int newSize = 0;
+
+    while (added) {
+        added = 0;
+        for (int i = 0; i < *stateSize; i++) {
+            int index = state[i];
+            Production prod = automaton->productions[index];
+            if (prod.dotPos < strlen(prod.rhs)) {
+                char nextSymbol = prod.rhs[prod.dotPos];
+                if (isNonTerminal(nextSymbol)) { // If the symbol is a non-terminal
+                    // Add corresponding productions of the non-terminal
+                    for (int j = 0; j < automaton->productionCount; j++) {
+                        if (automaton->productions[j].lhs[0] == nextSymbol) {
+                            int newProdIndex = j;
+                            // Avoid adding duplicates
+                            int alreadyExists = 0;
+                            for (int k = 0; k < newSize; k++) {
+                                if (newState[k] == newProdIndex) {
+                                    alreadyExists = 1;
+                                    break;
+                                }
+                            }
+                            if (!alreadyExists) {
+                                newState[newSize++] = newProdIndex;
+                                added = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // Copy new items to state
+        memcpy(state + *stateSize, newState, newSize * sizeof(int));
+        *stateSize += newSize;
+    }
+}
+
+// Function to compute GOTO operation for a given set of items and symbol
+void gotoSet(LR0Automaton* automaton, int* state, int stateSize, char symbol, int* newState, int* newSize) {
+    *newSize = 0;
+    for (int i = 0; i < stateSize; i++) {
+        int index = state[i];
+        Production prod = automaton->productions[index];
+        if (prod.dotPos < strlen(prod.rhs) && prod.rhs[prod.dotPos] == symbol) {
+            Production newProd = prod;
+            newProd.dotPos++;
+            newState[*newSize] = index;
+            (*newSize)++;
+        }
+    }
+    closure(automaton, newState, newSize);
+}
+
+// Function to compute the LR(0) automaton
+void computeLR0Automaton(LR0Automaton* automaton) {
+    int initialState[MAX_GRAMMAR_RULES] = {0};
+    int initialSize = 1;
+    int initialStateClosure[MAX_GRAMMAR_RULES];
+    memcpy(initialStateClosure, initialState, initialSize * sizeof(int));
+
+    // Apply closure to the initial state (starting item)
+    closure(automaton, initialStateClosure, &initialSize);
+
+    // Add the initial state
+    memcpy(automaton->states[automaton->stateCount], initialStateClosure, initialSize * sizeof(int));
+    automaton->stateCount++;
+
+    // Process states
+    for (int i = 0; i < automaton->stateCount; i++) {
+        int currentState[MAX_GRAMMAR_RULES];
+        int stateSize = 0;
+        memcpy(currentState, automaton->states[i], sizeof(int) * MAX_GRAMMAR_RULES);
+
+        for (char symbol = 'A'; symbol <= 'Z'; symbol++) {
+            int newState[MAX_GRAMMAR_RULES];
+            int newSize = 0;
+            gotoSet(automaton, currentState, stateSize, symbol, newState, &newSize);
+            if (newSize > 0) {
+                // Check if the new state already exists
+                int stateExists = 0;
+                for (int j = 0; j < automaton->stateCount; j++) {
+                    if (memcmp(automaton->states[j], newState, sizeof(int) * MAX_GRAMMAR_RULES) == 0) {
+                        stateExists = 1;
+                        break;
+                    }
+                }
+                if (!stateExists) {
+                    memcpy(automaton->states[automaton->stateCount], newState, sizeof(int) * newSize);
+                    automaton->stateCount++;
+                }
+            }
+        }
+    }
+
+    // Display all states and their items
+    for (int i = 0; i < automaton->stateCount; i++) {
+        printf("State %d:\n", i);
+        int stateSize = 0;
+        while (automaton->states[i][stateSize] != -1) {
+            int index = automaton->states[i][stateSize];
+            displayProduction(&automaton->productions[index]);
+            stateSize++;
+        }
+        printf("\n");
+    }
+}
+
+int main() {
+    // Define the grammar as an array of production rules
+    Production grammar[] = {
+        {"S'", "S", 0},
+        {"S", "CC", 0},
+        {"C", "cC", 0},
+        {"C", "d", 0}
+    };
+    int productionCount = sizeof(grammar) / sizeof(grammar[0]);
+
+    LR0Automaton automaton;
+    initAutomaton(&automaton, grammar, productionCount);
+
+    // Compute the LR(0) automaton
+    computeLR0Automaton(&automaton);
+
+    return 0;
+}

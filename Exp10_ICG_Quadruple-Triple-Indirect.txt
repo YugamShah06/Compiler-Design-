@@ -1,0 +1,158 @@
+#include <iostream>
+#include <stack>
+#include <vector>
+#include <sstream>
+#include <map>
+#include <cctype>
+
+using namespace std;
+
+// Operator precedence map
+map<char, int> precedence = {{'+', 1}, {'-', 1}, {'*', 2}, {'/', 2}};
+
+// Function to check if a character is an operator
+bool isOperator(char c) {
+    return precedence.find(c) != precedence.end();
+}
+
+// Function to convert infix expression to postfix (handles multi-character operands)
+vector<string> infixToPostfix(const string& expression) {
+    stack<char> s;
+    vector<string> postfix;
+    string operand = "";
+
+    for (char ch : expression) {
+        if (isalnum(ch)) {  // If it's an operand
+            operand += ch;
+        } else {
+            if (!operand.empty()) {
+                postfix.push_back(operand); // Push complete operand
+                operand = "";
+            }
+
+            if (ch == '(') {
+                s.push(ch);
+            } else if (ch == ')') {
+                while (!s.empty() && s.top() != '(') {
+                    postfix.push_back(string(1, s.top()));
+                    s.pop();
+                }
+                s.pop();  // Remove '('
+            } else if (isOperator(ch)) {
+                while (!s.empty() && precedence[ch] <= precedence[s.top()]) {
+                    postfix.push_back(string(1, s.top()));
+                    s.pop();
+                }
+                s.push(ch);
+            }
+        }
+    }
+
+    if (!operand.empty()) {
+        postfix.push_back(operand); // Push last operand
+    }
+
+    while (!s.empty()) {
+        postfix.push_back(string(1, s.top()));
+        s.pop();
+    }
+
+    return postfix;
+}
+
+// Function to generate Quadruple representation
+void generateQuadruple(const vector<string>& postfix) {
+    stack<string> s;
+    int tempVarCounter = 1;
+
+    cout << "\nQuadruple Representation:\n";
+    cout << " OP | ARG 1 | ARG 2 | RESULT \n";
+
+    for (const string& token : postfix) {
+        if (!isOperator(token[0]) || token.size() > 1) { // Operand
+            s.push(token);
+        } else { // Operator
+            string op2 = s.top(); s.pop();
+            string op1 = s.top(); s.pop();
+            string result = "t" + to_string(tempVarCounter);
+
+            cout << " " << token << "  |  " << op1 << "  |  " << op2 << "  |  " << result << endl;
+            s.push(result);
+            tempVarCounter++;
+        }
+    }
+}
+
+// Function to generate Triple representation
+void generateTriple(const vector<string>& postfix) {
+    stack<string> s;
+    int tempVarCounter = 1;
+
+    cout << "\nTriple Representation:\n";
+    cout << " OP | ARG 1 | ARG 2 \n";
+
+    for (const string& token : postfix) {
+        if (!isOperator(token[0]) || token.size() > 1) { // Operand
+            s.push(token);
+        } else { // Operator
+            string op2 = s.top(); s.pop();
+            string op1 = s.top(); s.pop();
+            string result = "t" + to_string(tempVarCounter);
+
+            cout << " " << token << "  |  " << op1 << "  |  " << op2 << endl;
+            s.push(result);
+            tempVarCounter++;
+        }
+    }
+}
+
+// Function to generate Indirect Triple representation
+void generateIndirectTriple(const vector<string>& postfix) {
+    stack<string> s;
+    vector<string> instructions;
+    int tempVarCounter = 1;
+
+    cout << "\nIndirect Triple Representation:\n";
+
+    for (const string& token : postfix) {
+        if (!isOperator(token[0]) || token.size() > 1) { // Operand
+            s.push(token);
+        } else { // Operator
+            string op2 = s.top(); s.pop();
+            string op1 = s.top(); s.pop();
+            string tempVar = "t" + to_string(tempVarCounter);
+
+            instructions.push_back(op1 + " " + token + " " + op2);
+            s.push(tempVar);
+            tempVarCounter++;
+        }
+    }
+
+    // Print Indirect Triple Instructions
+    for (size_t i = 0; i < instructions.size(); i++) {
+        cout << " (" << i << ") " << instructions[i] << endl;
+    }
+}
+
+int main() {
+    string expression;
+    cout << "Enter the infix expression: ";
+    getline(cin, expression);
+
+    // Convert to postfix
+    vector<string> postfix = infixToPostfix(expression);
+    
+    // Print postfix expression
+    cout << "\nPostfix Expression: ";
+    for (const string& token : postfix) {
+        cout << token << " ";
+    }
+    cout << endl;
+
+    // Generate representations
+    generateQuadruple(postfix);
+    generateTriple(postfix);
+    generateIndirectTriple(postfix);
+
+    return 0;
+}

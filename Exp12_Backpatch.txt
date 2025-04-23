@@ -1,0 +1,79 @@
+#include <iostream>
+#include <vector>
+#include <string>
+using namespace std;
+
+vector<string> code;
+
+// Emit a line of intermediate code and return its index
+int emit(const string& line) {
+    code.push_back(line);
+    return code.size() - 1;
+}
+
+// Backpatch placeholder "??" with actual target line number
+void backpatch(const vector<int>& list, int target) {
+    for (int index : list) {
+        size_t pos = code[index].find("??");
+        if (pos != string::npos) {
+            code[index].replace(pos, 2, to_string(target));
+        }
+    }
+}
+
+vector<int> makelist(int index) {
+    return vector<int>{index};
+}
+
+vector<int> merge(const vector<int>& list1, const vector<int>& list2) {
+    vector<int> result = list1;
+    result.insert(result.end(), list2.begin(), list2.end());
+    return result;
+}
+
+int main() {
+    string condition, trueStatement, falseStatement;
+
+    cout << "Enter condition (e.g., x < y): ";
+    getline(cin, condition);
+
+    cout << "Enter true block statement (e.g., a = b + c): ";
+    getline(cin, trueStatement);
+
+    cout << "Enter false block statement (optional, press Enter to skip): ";
+    getline(cin, falseStatement);
+
+    // Simulate condition check
+    int cond = emit("if " + condition + " goto ??");
+
+    // False jump placeholder
+    int jumpFalse = emit("goto ??");
+
+    // True block
+    int trueLabel = code.size();
+    emit(trueStatement);
+
+    // Optional false block
+    int endLabel;
+    if (!falseStatement.empty()) {
+        int jumpAfterTrue = emit("goto ??");  // jump over false block
+        endLabel = code.size();
+        emit(falseStatement);
+        int finalLabel = code.size();
+        backpatch(makelist(cond), trueLabel);
+        backpatch(makelist(jumpFalse), endLabel);
+        backpatch(makelist(jumpAfterTrue), finalLabel);
+    } else {
+        endLabel = code.size();
+        backpatch(makelist(cond), trueLabel);
+        backpatch(makelist(jumpFalse), endLabel);
+    }
+
+    // Print final code
+    cout << "\nGenerated Code with Backpatching:\n";
+    for (int i = 0; i < code.size(); ++i) {
+        cout << i << ": " << code[i] << endl;
+    }
+
+    return 0;
+}
